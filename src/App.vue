@@ -27,8 +27,8 @@
     <input type="range" min="1" max="10" value="3">
   </div>
 
-  <div class="sticky-cont" v-if="isStickyNoteVisible">
-    <div class="header-cont">
+  <div class="sticky-cont" v-if="isStickyNoteVisible" ref="draggableContainer">
+    <div class="header-cont"  @mousedown="dragMouseDown">
       <div class="minimise"></div>
       <div class="remove"></div>
     </div>
@@ -41,14 +41,20 @@
 <script>
 export default{
   mounted(){
-
   },
   data() {
     return{
-     istoolbarVisible: true,
-     isPencilToolbarVisible: false,
-     isEraserToolbarVisible:false,
-     isStickyNoteVisible:false
+      istoolbarVisible: true,
+      isPencilToolbarVisible: false,
+      isEraserToolbarVisible:false,
+      isStickyNoteVisible:false,
+      positions: {
+        clientX: undefined,
+        clientY: undefined,
+        movementX: 0,
+        movementY: 0
+      },
+
     }
   },
   methods:{
@@ -58,6 +64,28 @@ export default{
         this.isPencilToolbarVisible = false;
         this.isEraserToolbarVisible = false
       }
+    },
+    dragMouseDown: function (event) {
+      event.preventDefault()
+      // get the mouse cursor position at startup:
+      this.positions.clientX = event.clientX
+      this.positions.clientY = event.clientY
+      document.onmousemove = this.elementDrag
+      document.onmouseup = this.closeDragElement
+    },
+    elementDrag: function (event) {
+      event.preventDefault()
+      this.positions.movementX = this.positions.clientX - event.clientX
+      this.positions.movementY = this.positions.clientY - event.clientY
+      this.positions.clientX = event.clientX
+      this.positions.clientY = event.clientY
+      // set the element's new position:
+      this.$refs.draggableContainer.style.top = (this.$refs.draggableContainer.offsetTop - this.positions.movementY) + 'px'
+      this.$refs.draggableContainer.style.left = (this.$refs.draggableContainer.offsetLeft - this.positions.movementX) + 'px'
+    },
+    closeDragElement () {
+      document.onmouseup = null
+      document.onmousemove = null
     }
   }
 }
