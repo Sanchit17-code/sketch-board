@@ -7,7 +7,7 @@
     <img src="./assets/icons/pencil.svg" @click="isPencilToolbarVisible=!isPencilToolbarVisible" alt="">
     <img src="./assets/icons/eraser.svg" @click="isEraserToolbarVisible=!isEraserToolbarVisible" alt="">
     <img src="./assets/icons/download.svg" alt="">
-    <img src="./assets/icons/upload.svg" alt="">
+    <img @click="uploadFileInNote" src="./assets/icons/upload.svg" alt="">
     <img src="./assets/icons/stickyNote.svg" alt="" @click="isStickyNoteVisible= !isStickyNoteVisible">
     <img src="./assets/icons/redo.svg" alt="">
     <img src="./assets/icons/undo.svg" alt="">
@@ -29,11 +29,20 @@
 
   <div class="sticky-cont" v-if="isStickyNoteVisible" ref="draggableContainer">
     <div class="header-cont"  @mousedown="dragMouseDown">
-      <div class="minimise"></div>
-      <div class="remove"></div>
+      <div class="minimise"  @click="isTextAreaVisible=!isTextAreaVisible"></div>
+      <div class="remove" @click="isStickyNoteVisible=false"></div>
     </div>
-    <div class="note-cont">
+    <div class="note-cont" v-if="isTextAreaVisible">
       <textarea name=""></textarea>
+    </div>
+  </div>
+  <div class="sticky-cont" v-show="isStickyNoteHavingFileVisible" ref="draggableContainer">
+    <div class="header-cont"  @mousedown="dragMouseDown">
+      <div class="minimise"  @click="isImageAreaVisible=!isImageAreaVisible"></div>
+      <div class="remove" @click="isStickyNoteHavingFileVisible=false"></div>
+    </div>
+    <div class="note-cont" v-show="isImageAreaVisible">
+      <img id="imageArea" src="" alt="">
     </div>
   </div>
 </template>
@@ -48,6 +57,9 @@ export default{
       isPencilToolbarVisible: false,
       isEraserToolbarVisible:false,
       isStickyNoteVisible:false,
+      isStickyNoteHavingFileVisible: false,
+      isTextAreaVisible:true,
+      isImageAreaVisible:true,
       positions: {
         clientX: undefined,
         clientY: undefined,
@@ -58,6 +70,23 @@ export default{
     }
   },
   methods:{
+    uploadFileInNote(){
+      let input = document.createElement('input');
+      input.setAttribute('type',"file");
+      input.setAttribute('accept', 'image/*');
+      input.click();
+      input.addEventListener('change',this.handleFileSelect)
+    },
+    handleFileSelect(event){
+      const file = event.target.files[0];
+      if(file){
+        const imageURL = URL.createObjectURL(file)
+        const imageTag = document.getElementById('imageArea')
+        console.log('imageTag: ', imageTag);
+        imageTag.src = imageURL;
+        this.isStickyNoteHavingFileVisible = true;
+      }
+    },
     toggleMenubar(){
       this.istoolbarVisible = !this.istoolbarVisible;
       if(!this.istoolbarVisible){
@@ -221,7 +250,7 @@ img{
  background-color: green;
 }
 .remove{
- background-color: orange;
+ background-color: red;
 }
 
 .note-cont{
@@ -236,5 +265,10 @@ img{
   outline: none;
   border:none;
   resize: none;
+}
+.note-cont img{
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
 }
 </style>
