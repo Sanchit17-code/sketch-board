@@ -45,11 +45,14 @@
       <img id="imageArea" src="" alt="">
     </div>
   </div>
+  <canvas></canvas>
 </template>
 
 <script>
+import canvasLogic from './canvas'
 export default{
   mounted(){
+    canvasLogic();
   },
   data() {
     return{
