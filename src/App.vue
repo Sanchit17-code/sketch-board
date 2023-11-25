@@ -4,8 +4,8 @@
     <i class="fa-solid fa-bars" :class="[istoolbarVisible ? 'fa-bars' : 'fa-times' ]"></i>
   </div>
   <div class="tools-cont scale-tools" v-if="istoolbarVisible">
-    <img src="./assets/icons/pencil.svg" @click="isPencilToolbarVisible=!isPencilToolbarVisible" alt="">
-    <img src="./assets/icons/eraser.svg" @click="isEraserToolbarVisible=!isEraserToolbarVisible" alt="">
+    <img src="./assets/icons/pencil.svg" @click="togglePencil()" alt="">
+    <img src="./assets/icons/eraser.svg" @click="toggleEraser();" alt="">
     <img src="./assets/icons/download.svg" alt="">
     <img @click="uploadFileInNote" src="./assets/icons/upload.svg" alt="">
     <img src="./assets/icons/stickyNote.svg" alt="" @click="isStickyNoteVisible= !isStickyNoteVisible">
@@ -15,16 +15,25 @@
 
   <div class="pencil-tool-cont" v-if="isPencilToolbarVisible">
     <div class="pencil-width-cont">
-      <input type="range" min="1" max="10" value="3">
+      <input type="range" min="1" max="20" v-model="lineWidth">
     </div>
     <div class="pencil-color-cont">
-      <div class="black pencil-color"></div>
-      <div class="red pencil-color"></div>
-      <div class="blue pencil-color"></div>
+      <div class="each-color-cont">
+        <div class="black pencil-color" @click="lineColor = 'black'"></div>
+        <i class="fa fa-check tick" v-if="lineColor == 'black'" aria-hidden="true"></i>
+      </div>
+      <div class="each-color-cont">
+        <div class="red pencil-color"   @click="lineColor = 'red'"></div>
+        <i class="fa fa-check tick" v-if="lineColor == 'red'" aria-hidden="true"></i>
+      </div>
+      <div class="each-color-cont">
+        <div class="blue pencil-color"  @click="lineColor = 'blue'"></div>
+        <i class="fa fa-check tick" v-if="lineColor == 'blue'" aria-hidden="true"></i>
+      </div>
     </div>
   </div>
   <div class="eraser-tool-cont" v-if="isEraserToolbarVisible">
-    <input type="range" min="1" max="10" value="3">
+    <input type="range" min="20" max="160" v-model="eraserSize">
   </div>
 
   <div class="sticky-cont" v-if="isStickyNoteVisible" ref="draggableContainer">
@@ -32,7 +41,7 @@
       <div class="minimise"  @click="isTextAreaVisible=!isTextAreaVisible"></div>
       <div class="remove" @click="isStickyNoteVisible=false"></div>
     </div>
-    <div class="note-cont" v-if="isTextAreaVisible">
+    <div class="note-cont" v-show="isTextAreaVisible">
       <textarea name=""></textarea>
     </div>
   </div>
@@ -49,10 +58,10 @@
 </template>
 
 <script>
-import canvasLogic from './canvas'
+// import canvasLogic from './canvas'
 export default{
   mounted(){
-    canvasLogic();
+    this.canvasLogic();
   },
   data() {
     return{
@@ -69,10 +78,70 @@ export default{
         movementX: 0,
         movementY: 0
       },
+      ctx:'',
+      pos :{x:0,y:0},
+      eraserSize:40,
+      lineWidth:5,
+      lineColor:'black'
 
     }
   },
   methods:{
+    togglePencil(){
+      this.isPencilToolbarVisible=!this.isPencilToolbarVisible;
+      if(this.isEraserToolbarVisible)
+        this.isEraserToolbarVisible = false;
+    },
+    toggleEraser(){
+      this.isEraserToolbarVisible=!this.isEraserToolbarVisible
+      if(this.isPencilToolbarVisible)
+        this.isPencilToolbarVisible = false;
+    },
+    canvasLogic(){
+      let canvas = document.querySelector('canvas')
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      this.ctx = canvas.getContext('2d');
+      this.pos = {x:0,y:0}
+      window.addEventListener('resize',this.resize)
+      document.addEventListener('mousemove',this.draw)
+      document.addEventListener('mouseup',this.draw)
+      document.addEventListener('mousedown',this.setPosition)
+      // document.addEventListener('mouseenter',this.setPosition)
+
+    },
+    setPosition(e){
+      this.pos.x = e.clientX;
+      this.pos.y = e.clientY;
+    },
+    resize(){
+      this.ctx.canvas.height = window.innerHeight;
+      this.ctx.canvas.width = window.innerWidth;
+    },
+    draw(e){      
+      if(e.buttons !==1 && e.type!='mouseup')
+        return;
+      if(!this.isEraserToolbarVisible){  
+        this.ctx.beginPath();
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.strokeStyle = this.lineColor;
+        this.ctx.moveTo(this.pos.x,this.pos.y);
+        this.setPosition(e)
+        this.ctx.lineTo(this.pos.x,this.pos.y);
+        this.ctx.stroke();
+      }
+      else{
+        this.setPosition(e)
+        this.ctx.clearRect(
+          this.pos.x,
+          this.pos.y,
+          this.eraserSize,
+          this.eraserSize
+        );
+      }
+
+    },
     uploadFileInNote(){
       let input = document.createElement('input');
       input.setAttribute('type',"file");
@@ -180,6 +249,13 @@ img{
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.each-color-cont{
+  position: relative;
+}
+.tick{
+  position: absolute;
+  left: 5px;
 }
 .pencil-width-cont input{
   width: 80%;
