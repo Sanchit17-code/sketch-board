@@ -9,8 +9,8 @@
     <img src="./assets/icons/download.svg" alt="">
     <img @click="uploadFileInNote" src="./assets/icons/upload.svg" alt="">
     <img src="./assets/icons/stickyNote.svg" alt="" @click="isStickyNoteVisible= !isStickyNoteVisible">
-    <img src="./assets/icons/redo.svg" alt="">
-    <img src="./assets/icons/undo.svg" @click="undo" alt="">
+    <img src="./assets/icons/redo.svg" @click="redo" alt="redo">
+    <img src="./assets/icons/undo.svg" @click="undo" alt="undo">
   </div>
 
   <div class="pencil-tool-cont" v-if="isPencilToolbarVisible">
@@ -126,10 +126,11 @@ export default{
       if (e.target.closest('#tools-cont-id')) {
         return;
       }
-      this.actionObj['pos1'] = {
+      this.actionObj.posArray = [];
+      this.actionObj.posArray.push({
         x : e.clientX,
         y : e.clientY,
-      }
+      })
       console.log("initialize", e.clientX, e.clientY);
     },
     finalizePosition(e){
@@ -137,10 +138,10 @@ export default{
       if (e.target.closest('#tools-cont-id')) {
         return;
       }
-      this.actionObj['pos2'] = {
+      this.actionObj.posArray.push({
         x : e.clientX,
         y : e.clientY,
-      }
+      })
       this.actionObj = JSON.parse(JSON.stringify(this.actionObj));
       console.log("finalize", e.clientX, e.clientY);
       let N = this.undoArray.length;
@@ -150,6 +151,7 @@ export default{
       this.currentArray.push(this.actionObj);
       console.log('this.currentArray: ', JSON.parse(JSON.stringify(this.currentArray)));
       this.undoArray.push(JSON.parse(JSON.stringify(this.currentArray)))
+      this.redoArray=[]; // whenever adding new lines or points, redo array should become empty as nothing to redo now.
       this.undoArray = JSON.parse(JSON.stringify(this.undoArray));
       console.log('this.undoArray: ', JSON.parse(JSON.stringify(this.undoArray)));
     },
@@ -174,6 +176,10 @@ export default{
         this.ctx.strokeStyle = this.lineColor;
         this.ctx.moveTo(this.pos.x,this.pos.y);
         this.setPosition(e)
+        this.actionObj.posArray.push({
+          x : this.pos.x,
+          y : this.pos.y,
+        })
         this.ctx.lineTo(this.pos.x,this.pos.y);
         this.ctx.stroke(); 
       }
@@ -186,6 +192,13 @@ export default{
           this.eraserSize
         );
       }
+    },
+    redo(){
+      if(!this.redoArray.length)
+      return ;
+      this.clearCanvas()
+      this.undoArray.push(this.redoArray.pop())
+      this.redrawActions();
     },
     undo(){
       this.clearCanvas()
@@ -205,9 +218,11 @@ export default{
         this.ctx.beginPath();
         this.ctx.lineWidth = actionObj.width;
         this.ctx.strokeStyle = actionObj.color;
-        this.ctx.moveTo(actionObj.pos1.x,actionObj.pos1.y);
-        this.ctx.lineTo(actionObj.pos2.x,actionObj.pos2.y);
-        this.ctx.stroke();
+        for(let i=0;i<actionObj.posArray.length-1;i++){
+          this.ctx.moveTo(actionObj.posArray[i].x,actionObj.posArray[i].y)
+          this.ctx.lineTo(actionObj.posArray[i+1].x,actionObj.posArray[i+1].y)
+          this.ctx.stroke();
+        }
       })
     },
     clearCanvas(){
