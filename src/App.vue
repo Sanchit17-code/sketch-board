@@ -3,14 +3,14 @@
   <div class="options-cont" @click="toggleMenubar()">
     <i class="fa-solid fa-bars" :class="[istoolbarVisible ? 'fa-bars' : 'fa-times' ]"></i>
   </div>
-  <div class="tools-cont scale-tools" v-if="istoolbarVisible">
+  <div class="tools-cont scale-tools" id="tools-cont-id" v-if="istoolbarVisible">
     <img src="./assets/icons/pencil.svg" @click="togglePencil()" alt="">
     <img src="./assets/icons/eraser.svg" @click="toggleEraser();" alt="">
     <img src="./assets/icons/download.svg" alt="">
     <img @click="uploadFileInNote" src="./assets/icons/upload.svg" alt="">
     <img src="./assets/icons/stickyNote.svg" alt="" @click="isStickyNoteVisible= !isStickyNoteVisible">
     <img src="./assets/icons/redo.svg" alt="">
-    <img src="./assets/icons/undo.svg" alt="">
+    <img src="./assets/icons/undo.svg" @click="undo" alt="">
   </div>
 
   <div class="pencil-tool-cont" v-if="isPencilToolbarVisible">
@@ -54,7 +54,7 @@
       <img id="imageArea" src="" alt="">
     </div>
   </div>
-  <canvas></canvas>
+  <canvas id="canvas"></canvas>
 </template>
 
 <script>
@@ -82,7 +82,13 @@ export default{
       pos :{x:0,y:0},
       eraserSize:40,
       lineWidth:5,
-      lineColor:'black'
+      lineColor:'black',
+      actionObj:{
+        type:'draw',
+      },
+      undoArray:[],
+      redoArray:[],
+      currentArray:[],
 
     }
   },
@@ -106,8 +112,9 @@ export default{
       this.pos = {x:0,y:0}
       window.addEventListener('resize',this.resize)
       document.addEventListener('mousemove',this.draw)
-      document.addEventListener('mouseup',this.draw)
+      document.addEventListener('mouseup',this.finalizePosition)
       document.addEventListener('mousedown',this.setPosition)
+      document.addEventListener('mousedown',this.initializePosition)
       // document.addEventListener('mouseenter',this.setPosition)
 
     },
@@ -115,21 +122,60 @@ export default{
       this.pos.x = e.clientX;
       this.pos.y = e.clientY;
     },
+    initializePosition(e){
+      if (e.target.closest('#tools-cont-id')) {
+        return;
+      }
+      this.actionObj['pos1'] = {
+        x : e.clientX,
+        y : e.clientY,
+      }
+      console.log("initialize", e.clientX, e.clientY);
+    },
+    finalizePosition(e){
+      console.log("3eqffq",[]);
+      if (e.target.closest('#tools-cont-id')) {
+        return;
+      }
+      this.actionObj['pos2'] = {
+        x : e.clientX,
+        y : e.clientY,
+      }
+      this.actionObj = JSON.parse(JSON.stringify(this.actionObj));
+      console.log("finalize", e.clientX, e.clientY);
+      let N = this.undoArray.length;
+      this.currentArray = JSON.parse(JSON.stringify(this.undoArray[N-1] || [])) ; // as undo array is a 2d array, so the latest is the last array of undo array
+      this.currentArray = JSON.parse(JSON.stringify([... this.currentArray])) 
+      console.log('this.currentArray:', JSON.parse(JSON.stringify(this.currentArray)));
+      this.currentArray.push(this.actionObj);
+      console.log('this.currentArray: ', JSON.parse(JSON.stringify(this.currentArray)));
+      this.undoArray.push(JSON.parse(JSON.stringify(this.currentArray)))
+      this.undoArray = JSON.parse(JSON.stringify(this.undoArray));
+      console.log('this.undoArray: ', JSON.parse(JSON.stringify(this.undoArray)));
+    },
     resize(){
       this.ctx.canvas.height = window.innerHeight;
       this.ctx.canvas.width = window.innerWidth;
     },
-    draw(e){      
-      if(e.buttons !==1 && e.type!='mouseup')
+    draw(e){     
+      // console.log("e.target",e.target); 
+      if (e.target.closest('#tools-cont-id')) {
         return;
+      }
+      if(e.buttons !==1)
+        return;
+      // console.log('e: ', e);
       if(!this.isEraserToolbarVisible){  
+        this.actionObj.type = 'draw';
+        this.actionObj.color = this.lineColor;
+        this.actionObj.width = this.lineWidth;
         this.ctx.beginPath();
         this.ctx.lineWidth = this.lineWidth;
         this.ctx.strokeStyle = this.lineColor;
         this.ctx.moveTo(this.pos.x,this.pos.y);
         this.setPosition(e)
         this.ctx.lineTo(this.pos.x,this.pos.y);
-        this.ctx.stroke();
+        this.ctx.stroke(); 
       }
       else{
         this.setPosition(e)
@@ -140,7 +186,34 @@ export default{
           this.eraserSize
         );
       }
-
+    },
+    undo(){
+      this.clearCanvas()
+      // let lastArray = this.undoArray[this.undoArray.length-1];
+      console.log('this.undoArray: ', this.undoArray);
+      console.log(this.undoArray.length);
+      this.redoArray.push(this.undoArray.pop())
+      console.log(this.undoArray.length);
+      this.redrawActions();
+    },
+    redrawActions(){
+      console.log(this.undoArray.length);
+      let N = this.undoArray.length;
+      let latestActionsArray = this.undoArray[N-1]|| [];
+      console.log('latestActionsArray: ', latestActionsArray);
+      latestActionsArray.forEach((actionObj)=>{
+        this.ctx.beginPath();
+        this.ctx.lineWidth = actionObj.width;
+        this.ctx.strokeStyle = actionObj.color;
+        this.ctx.moveTo(actionObj.pos1.x,actionObj.pos1.y);
+        this.ctx.lineTo(actionObj.pos2.x,actionObj.pos2.y);
+        this.ctx.stroke();
+      })
+    },
+    clearCanvas(){
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     },
     uploadFileInNote(){
       let input = document.createElement('input');
