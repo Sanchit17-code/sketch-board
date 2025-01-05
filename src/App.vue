@@ -89,6 +89,7 @@ export default{
       undoArray:[],
       redoArray:[],
       currentArray:[],
+      canvas:{},
 
     }
   },
@@ -104,11 +105,11 @@ export default{
         this.isPencilToolbarVisible = false;
     },
     canvasLogic(){
-      let canvas = document.querySelector('canvas')
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      this.canvas = document.querySelector('canvas')
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
 
-      this.ctx = canvas.getContext('2d');
+      this.ctx = this.canvas.getContext('2d');
       this.pos = {x:0,y:0}
       window.addEventListener('resize',this.resize)
       document.addEventListener('mousemove',this.draw)
@@ -134,39 +135,23 @@ export default{
       console.log("initialize", e.clientX, e.clientY);
     },
     finalizePosition(e){
-      console.log("3eqffq",[]);
       if (e.target.closest('#tools-cont-id')) {
         return;
       }
-      this.actionObj.posArray.push({
-        x : e.clientX,
-        y : e.clientY,
-      })
-      this.actionObj = JSON.parse(JSON.stringify(this.actionObj));
-      console.log("finalize", e.clientX, e.clientY);
-      let N = this.undoArray.length;
-      this.currentArray = JSON.parse(JSON.stringify(this.undoArray[N-1] || [])) ; // as undo array is a 2d array, so the latest is the last array of undo array
-      this.currentArray = JSON.parse(JSON.stringify([... this.currentArray])) 
-      console.log('this.currentArray:', JSON.parse(JSON.stringify(this.currentArray)));
-      this.currentArray.push(this.actionObj);
-      console.log('this.currentArray: ', JSON.parse(JSON.stringify(this.currentArray)));
-      this.undoArray.push(JSON.parse(JSON.stringify(this.currentArray)))
+      let url = this.canvas.toDataURL();
+      this.undoArray.push(url)
       this.redoArray=[]; // whenever adding new lines or points, redo array should become empty as nothing to redo now.
-      this.undoArray = JSON.parse(JSON.stringify(this.undoArray));
-      console.log('this.undoArray: ', JSON.parse(JSON.stringify(this.undoArray)));
     },
     resize(){
       this.ctx.canvas.height = window.innerHeight;
       this.ctx.canvas.width = window.innerWidth;
     },
     draw(e){     
-      // console.log("e.target",e.target); 
+      if(e.buttons !==1)
+        return;
       if (e.target.closest('#tools-cont-id')) {
         return;
       }
-      if(e.buttons !==1)
-        return;
-      // console.log('e: ', e);
       if(!this.isEraserToolbarVisible){  
         this.actionObj.type = 'draw';
         this.actionObj.color = this.lineColor;
@@ -201,29 +186,18 @@ export default{
       this.redrawActions();
     },
     undo(){
+      if(!this.undoArray.length)
+      return ;
       this.clearCanvas()
-      // let lastArray = this.undoArray[this.undoArray.length-1];
-      console.log('this.undoArray: ', this.undoArray);
-      console.log(this.undoArray.length);
       this.redoArray.push(this.undoArray.pop())
-      console.log(this.undoArray.length);
       this.redrawActions();
     },
     redrawActions(){
-      console.log(this.undoArray.length);
-      let N = this.undoArray.length;
-      let latestActionsArray = this.undoArray[N-1]|| [];
-      console.log('latestActionsArray: ', latestActionsArray);
-      latestActionsArray.forEach((actionObj)=>{
-        this.ctx.beginPath();
-        this.ctx.lineWidth = actionObj.width;
-        this.ctx.strokeStyle = actionObj.color;
-        for(let i=0;i<actionObj.posArray.length-1;i++){
-          this.ctx.moveTo(actionObj.posArray[i].x,actionObj.posArray[i].y)
-          this.ctx.lineTo(actionObj.posArray[i+1].x,actionObj.posArray[i+1].y)
-          this.ctx.stroke();
-        }
-      })
+      let img = new Image()
+      img.src = this.undoArray[this.undoArray.length-1]
+      img.onload = (e)=>{
+        this.ctx.drawImage(img,0,0,img.width,img.height,0,0,this.canvas.width,this.canvas.height)
+      }
     },
     clearCanvas(){
       const canvas = document.getElementById('canvas');
